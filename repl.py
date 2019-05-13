@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Requires Python 2.7 or Python 3.3+
 #
 # To get usage information: python repl.py
@@ -9,6 +10,7 @@ import collections
 import contextlib
 import json
 import sys
+import os
 
 if (3,3) <= sys.version_info < (4,0):
     import http.client as httplib
@@ -303,17 +305,18 @@ def parse_args_or_exit(prog_name, err, out, args):
             remaining.append(arg)
 
     if len(remaining) == 0:
-        err.write("Missing <auth.json> argument.\n")
-        err.write("Run with \"--help\" for more information.\n")
-        sys.exit(1)
-
-    if len(remaining) != 1:
-        err.write("Expecting one non-option argument, got {}: {}"
+        auth_file = default_auth_json_path()
+        if not os.path.isfile(auth_file):
+            err.write("Couldn't find default auth.json file at {}.\n".format(devq(auth_file)))
+            err.write("Run with \"--help\" for more information.\n")
+            sys.exit(1)
+    elif len(remaining) == 1:
+        auth_file = remaining[0]
+    else:
+        err.write("Expecting at most one non-option argument, got {}: {}"
                   .format(len(remaining), devql(remaining)))
         err.write("Run with \"--help\" for more information.\n")
         sys.exit(1)
-
-    auth_file = remaining[0]
 
     # Load the appropriate REPL.
     if repl_preference == 'ipython':
@@ -363,13 +366,18 @@ def try_creating_ipython_repl(err):
         return None
 
 def print_usage(prog_name, out):
-    out.write("Usage: {} [options...] <auth.json>\n")
+    out.write("Usage: {} [options...] [auth.json]\n")
     out.write("\n")
-    out.write("    <auth-json>: See ReadMe.md for information on how to create this file.\n")
+    out.write("    [auth.json]: See ReadMe.md for information on how to create this file. (Default: <script_dir>/auth.json)\n")
     out.write("\n")
     out.write("    -ri: Use IPython for the REPL.\n")
     out.write("    -rs: Use the standard Python REPL.\n")
     out.write("\n")
+
+def default_auth_json_path():
+    script = os.path.realpath(__file__)
+    d = os.path.dirname(script)
+    return os.path.join(d, "auth.json")
 
 if __name__ == '__main__':
     main()
